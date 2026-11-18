@@ -451,7 +451,7 @@
     $("spiceStats").innerHTML = `<div class="chips">${Object.entries(spiceCount)
       .map(([s, n]) => `<span class="chip">${esc(s)} · ${n}人</span>`).join("")}</div>`;
 
-    const sorted = [...orders].sort((a, b) => String(b.updated).localeCompare(String(a.updated)));
+    const sorted = [...orders].sort((a, b) => (Date.parse(b.updated) || 0) - (Date.parse(a.updated) || 0));
     $("people").innerHTML = sorted.map((o) => `
       <div class="card">
         <div class="person-head">

@@ -5,7 +5,7 @@
 window.BBQ_CONFIG = {
   // 部署 Google Apps Script 后得到的网址（以 /exec 结尾）。
   // 留空 = 演示模式：订单只保存在你自己的浏览器里，别人看不到。
-  SCRIPT_URL: "",
+  SCRIPT_URL: "https://script.google.com/macros/s/AKfycbxOabTEWOvGRNuHWtkjXduXnBy1M3fw0wEF2mQXRI2GbN8V0Hb0tTHjUVtrFqYQ0cC2/exec",
 
   // 页面标题和聚会信息
   TITLE: "周末烧烤局 🍢",
