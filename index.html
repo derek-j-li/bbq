@@ -148,6 +148,26 @@
     font-size: 15px; z-index: 20; transition: transform .25s; max-width: calc(100% - 32px);
   }
   .toast.show { transform: translateX(-50%) translateY(0); }
+  .req { color: var(--danger); font-size: 13px; font-weight: 500; margin-left: 4px; }
+  .card.need { border-color: var(--danger); box-shadow: 0 0 0 3px color-mix(in srgb, var(--danger) 20%, transparent); }
+
+  .modal {
+    position: fixed; inset: 0; z-index: 30; display: flex; align-items: center; justify-content: center;
+    padding: 16px; background: rgba(0, 0, 0, .45); animation: fade .2s;
+  }
+  .modal-box {
+    width: 100%; max-width: 380px; background: var(--card); border-radius: 20px;
+    padding: 28px 20px 20px; text-align: center; animation: pop .25s;
+  }
+  .modal-icon { font-size: 56px; line-height: 1; }
+  .modal-box h2 { margin: 12px 0 6px; font-size: 24px; color: var(--ok); }
+  .modal-text { margin: 0; font-size: 16px; }
+  .modal-list { margin: 10px 0 0; font-size: 14px; color: var(--muted); max-height: 30vh; overflow-y: auto; }
+  .modal-actions { display: flex; gap: 10px; margin-top: 18px; }
+  .modal-actions .btn { flex: 1; padding: 12px 10px; }
+  .btn.ghost2 { background: var(--bg); color: var(--text); border: 1px solid var(--line); }
+  @keyframes fade { from { opacity: 0; } }
+  @keyframes pop { from { transform: scale(.9); opacity: 0; } }
   [hidden] { display: none !important; }
 </style>
 </head>
@@ -192,8 +212,8 @@
       <div id="othersCustom"></div>
     </div>
 
-    <div class="card">
-      <h2>辣度</h2>
+    <div class="card" id="spiceCardOrder">
+      <h2>辣度 <span class="req">* 必选</span></h2>
       <div class="chips" id="spice"></div>
     </div>
 
@@ -220,16 +240,16 @@
         <div class="stat"><div class="v" id="statItems">0</div><div class="l">串 / 份（合计）</div></div>
       </div>
     </div>
-    <div class="card">
-      <h2>采购汇总</h2>
-      <div id="totals"></div>
-    </div>
+    <h2 style="font-size:17px;margin:20px 0 0">每个人的订单</h2>
+    <div id="people"></div>
     <div class="card" id="spiceCard" hidden>
       <h2>辣度分布</h2>
       <div id="spiceStats"></div>
     </div>
-    <h2 style="font-size:17px;margin:20px 0 0">每个人的订单</h2>
-    <div id="people"></div>
+    <div class="card">
+      <h2>采购汇总</h2>
+      <div id="totals"></div>
+    </div>
   </section>
 </div>
 
@@ -241,6 +261,20 @@
 </div>
 
 <div class="toast" id="toast"></div>
+
+<div class="modal" id="successModal" hidden>
+  <div class="modal-box" role="dialog" aria-modal="true" aria-labelledby="successTitle">
+    <div class="modal-icon">✅</div>
+    <h2 id="successTitle">提交成功！</h2>
+    <p class="modal-text" id="successText"></p>
+    <p class="modal-list" id="successList"></p>
+    <p class="hint">想改的话，用同一个名字回来改就行。</p>
+    <div class="modal-actions">
+      <button class="btn ghost2" id="okBtn">好的</button>
+      <button class="btn" id="viewAllBtn">看看大家点了什么</button>
+    </div>
+  </div>
+</div>
 
 <script>
 // 每次都加载最新的 config.js（绕过浏览器缓存），这样改菜单后立即生效
@@ -457,6 +491,7 @@ window.startBBQ = () => {
     const b = e.target.closest(".chip");
     if (!b) return;
     spice = spice === b.dataset.v ? "" : b.dataset.v;
+    if (spice) $("spiceCardOrder").classList.remove("need");
     renderSpice();
   });
 
@@ -495,6 +530,13 @@ window.startBBQ = () => {
     const name = myName();
     if (!name) { toast("请先填写名字"); $("name").focus(); return; }
     if (!Object.keys(cart).length) { toast("还没有选菜哦"); return; }
+    if (!spice) {
+      toast("请选择辣度");
+      const card = $("spiceCardOrder");
+      card.classList.add("need");
+      card.scrollIntoView({ behavior: "smooth", block: "center" });
+      return;
+    }
     const btn = $("submitBtn");
     btn.disabled = true;
     btn.textContent = "提交中…";
@@ -502,8 +544,8 @@ window.startBBQ = () => {
       orders = normalize(await store.post({ action: "save", name, items: { ...cart, [PEOPLE_KEY]: people }, spice, note: $("note").value.trim() }));
       lastFetch = new Date();
       try { localStorage.setItem("bbq_name", name); } catch {}
-      toast("✅ 订单已保存！");
       renderAll();
+      showSuccess(name);
     } catch (err) {
       toast("❌ 提交失败，请重试");
       console.error(err);
@@ -528,6 +570,25 @@ window.startBBQ = () => {
       console.error(err);
     }
   });
+
+  // ---------- 提交成功弹窗 ----------
+  function showSuccess(name) {
+    const kinds = Object.keys(cart).length;
+    const total = Object.values(cart).reduce((a, b) => a + b, 0);
+    $("successText").innerHTML =
+      `<b>${esc(name)}</b> · ${people}人 · ${esc(spice)}<br>共 ${kinds} 样，${total} 份`;
+    $("successList").textContent = Object.entries(cart).map(([id, n]) => `${itemLabel(id)}×${n}`).join("、");
+    $("toast").classList.remove("show");
+    $("successModal").hidden = false;
+  }
+  const closeSuccess = () => ($("successModal").hidden = true);
+  $("okBtn").addEventListener("click", closeSuccess);
+  $("viewAllBtn").addEventListener("click", () => {
+    closeSuccess();
+    document.querySelector('.tab[data-tab="all"]').click();
+  });
+  $("successModal").addEventListener("click", (e) => { if (e.target.id === "successModal") closeSuccess(); });
+  document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeSuccess(); });
 
   // ---------- 汇总页 ----------
   function renderAll() {
