@@ -672,7 +672,8 @@ window.startBBQ = () => {
   // ---------- 初始化 ----------
   document.title = C.TITLE.replace(/\s*\p{Extended_Pictographic}/gu, "") || "烧烤点单";
   $("title").textContent = C.TITLE;
-  $("subtitle").textContent = C.SUBTITLE;
+  $("subtitle").textContent = C.SUBTITLE || "";
+  $("subtitle").hidden = !C.SUBTITLE;
   $("demoBanner").hidden = !DEMO;
   try { $("name").value = localStorage.getItem("bbq_name") || ""; } catch {}
   renderMenu();

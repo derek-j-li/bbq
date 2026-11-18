@@ -9,7 +9,7 @@ window.BBQ_CONFIG = {
 
   // 页面标题和聚会信息
   TITLE: "周末烧烤局 🍢",
-  SUBTITLE: "提前点单，主办方按需采购，不浪费！",
+  SUBTITLE: "",   // 副标题，留空则不显示
 
   // 辣度选项
   SPICE_LEVELS: ["不辣", "微辣", "中辣", "特辣"],
