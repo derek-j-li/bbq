@@ -1,0 +1,507 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>烧烤点单</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🍢</text></svg>">
+<style>
+  :root {
+    --bg: #fbf6f1;
+    --card: #ffffff;
+    --text: #2b211b;
+    --muted: #8a7a6e;
+    --line: #eadfd5;
+    --accent: #d9480f;
+    --accent-soft: #fde7dc;
+    --ok: #2f9e44;
+    --danger: #c92a2a;
+    --shadow: 0 1px 3px rgba(60, 30, 10, .08);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #1c1714;
+      --card: #27201b;
+      --text: #f3ebe4;
+      --muted: #a8988b;
+      --line: #3a302a;
+      --accent: #ff7a3d;
+      --accent-soft: #3d2518;
+      --ok: #51cf66;
+      --danger: #ff6b6b;
+      --shadow: none;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font: 16px/1.5 -apple-system, BlinkMacSystemFont, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans SC", sans-serif;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .wrap { max-width: 720px; margin: 0 auto; padding: 0 16px 120px; }
+  header { padding: 28px 0 12px; }
+  h1 { margin: 0; font-size: 26px; }
+  .subtitle { margin: 4px 0 0; color: var(--muted); }
+  .banner {
+    margin: 12px 0 0; padding: 10px 12px; border-radius: 10px;
+    background: #fff3bf; color: #5c4400; font-size: 14px;
+  }
+  @media (prefers-color-scheme: dark) { .banner { background: #3b3115; color: #ffe8a3; } }
+
+  .tabs {
+    position: sticky; top: 0; z-index: 5;
+    display: flex; gap: 8px; padding: 10px 0; background: var(--bg);
+  }
+  .tab {
+    flex: 1; padding: 10px; border: 1px solid var(--line); border-radius: 999px;
+    background: var(--card); color: var(--text); font-size: 15px; cursor: pointer;
+  }
+  .tab.active { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600; }
+
+  .card {
+    background: var(--card); border: 1px solid var(--line); border-radius: 14px;
+    padding: 14px 16px; margin: 12px 0; box-shadow: var(--shadow);
+  }
+  .card h2 { margin: 0 0 8px; font-size: 17px; }
+  label.field { display: block; font-weight: 600; margin-bottom: 6px; }
+  input[type=text], textarea {
+    width: 100%; padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px;
+    background: var(--bg); color: var(--text); font: inherit;
+  }
+  textarea { resize: vertical; min-height: 60px; }
+  .hint { font-size: 13px; color: var(--muted); margin-top: 6px; }
+  .hint.warn { color: var(--accent); }
+
+  .item {
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    padding: 10px 0; border-top: 1px solid var(--line);
+  }
+  .item:first-of-type { border-top: none; }
+  .item .name { font-size: 16px; }
+  .item .unit { color: var(--muted); font-size: 13px; margin-left: 4px; }
+  .item .others { color: var(--muted); font-size: 12px; }
+  .stepper { display: flex; align-items: center; gap: 4px; flex-shrink: 0; }
+  .stepper button {
+    width: 36px; height: 36px; border-radius: 50%; border: 1px solid var(--line);
+    background: var(--bg); color: var(--text); font-size: 20px; line-height: 1; cursor: pointer;
+  }
+  .stepper button.plus { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .stepper button:disabled { opacity: .3; cursor: default; }
+  .stepper .qty { width: 32px; text-align: center; font-variant-numeric: tabular-nums; font-weight: 600; }
+  .item.picked .name { color: var(--accent); font-weight: 600; }
+
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; }
+  .chip {
+    padding: 6px 14px; border-radius: 999px; border: 1px solid var(--line);
+    background: var(--bg); color: var(--text); font: inherit; font-size: 15px; cursor: pointer;
+  }
+  .chip.active { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); font-weight: 600; }
+
+  .bar {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 10;
+    background: var(--card); border-top: 1px solid var(--line);
+    padding: 12px 16px calc(12px + env(safe-area-inset-bottom));
+  }
+  .bar-inner { max-width: 720px; margin: 0 auto; display: flex; align-items: center; gap: 12px; }
+  .bar .summary { flex: 1; font-size: 14px; color: var(--muted); }
+  .bar .summary b { color: var(--text); font-size: 16px; }
+  .btn {
+    padding: 12px 22px; border: none; border-radius: 999px; font: inherit; font-weight: 600;
+    background: var(--accent); color: #fff; cursor: pointer;
+  }
+  .btn:disabled { opacity: .5; cursor: default; }
+  .btn.ghost { background: transparent; color: var(--danger); border: 1px solid var(--line); padding: 8px 14px; font-weight: 500; font-size: 14px; }
+  .btn.small { padding: 6px 14px; font-size: 14px; }
+
+  table { width: 100%; border-collapse: collapse; }
+  td { padding: 7px 0; border-top: 1px solid var(--line); vertical-align: top; }
+  tr:first-child td { border-top: none; }
+  td.num { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; font-weight: 600; }
+  td.who { color: var(--muted); font-size: 13px; padding-left: 10px; }
+  .cat-title { font-size: 14px; color: var(--muted); margin: 14px 0 2px; font-weight: 600; }
+  .cat-title:first-child { margin-top: 0; }
+
+  .person-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+  .person-head .pname { font-weight: 700; font-size: 17px; }
+  .person-head .time { color: var(--muted); font-size: 12px; }
+  .tag { display: inline-block; padding: 1px 8px; border-radius: 6px; background: var(--accent-soft); color: var(--accent); font-size: 12px; margin-left: 6px; vertical-align: 2px; }
+  .person-items { margin-top: 6px; color: var(--text); font-size: 15px; }
+  .person-note { margin-top: 6px; color: var(--muted); font-size: 14px; }
+  .stats { display: flex; gap: 10px; }
+  .stat { flex: 1; text-align: center; }
+  .stat .v { font-size: 26px; font-weight: 700; color: var(--accent); font-variant-numeric: tabular-nums; }
+  .stat .l { font-size: 13px; color: var(--muted); }
+  .empty { text-align: center; color: var(--muted); padding: 24px 0; }
+  .toolbar { display: flex; justify-content: space-between; align-items: center; color: var(--muted); font-size: 13px; }
+
+  .toast {
+    position: fixed; left: 50%; top: 20px; transform: translateX(-50%) translateY(-120%);
+    background: var(--text); color: var(--bg); padding: 10px 18px; border-radius: 999px;
+    font-size: 15px; z-index: 20; transition: transform .25s; max-width: calc(100% - 32px);
+  }
+  .toast.show { transform: translateX(-50%) translateY(0); }
+  [hidden] { display: none !important; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1 id="title"></h1>
+    <p class="subtitle" id="subtitle"></p>
+    <div class="banner" id="demoBanner" hidden>⚠️ 演示模式：还没有连接 Google 表格，订单只保存在本机浏览器，其他人看不到。请在 config.js 中填写 SCRIPT_URL。</div>
+  </header>
+
+  <nav class="tabs">
+    <button class="tab active" data-tab="order">🍖 我要点单</button>
+    <button class="tab" data-tab="all">📋 大家点了什么</button>
+  </nav>
+
+  <!-- 点单 -->
+  <section id="tab-order">
+    <div class="card">
+      <label class="field" for="name">你的名字</label>
+      <input type="text" id="name" maxlength="30" placeholder="例如：小李" autocomplete="nickname">
+      <div class="hint" id="nameHint">同一个名字再次提交会覆盖之前的订单，方便修改。</div>
+    </div>
+
+    <div id="menu"></div>
+
+    <div class="card">
+      <h2>辣度</h2>
+      <div class="chips" id="spice"></div>
+    </div>
+
+    <div class="card">
+      <label class="field" for="note">备注</label>
+      <textarea id="note" maxlength="200" placeholder="忌口、过敏、想加的菜、几点到……"></textarea>
+    </div>
+
+    <div style="text-align:center" id="deleteWrap" hidden>
+      <button class="btn ghost" id="deleteBtn">取消我的订单</button>
+    </div>
+  </section>
+
+  <!-- 汇总 -->
+  <section id="tab-all" hidden>
+    <div class="toolbar">
+      <span id="updatedAt"></span>
+      <button class="btn small" id="refreshBtn">刷新</button>
+    </div>
+    <div class="card">
+      <div class="stats">
+        <div class="stat"><div class="v" id="statPeople">0</div><div class="l">人已点单</div></div>
+        <div class="stat"><div class="v" id="statItems">0</div><div class="l">份 / 串（合计）</div></div>
+      </div>
+    </div>
+    <div class="card">
+      <h2>采购汇总</h2>
+      <div id="totals"></div>
+    </div>
+    <div class="card" id="spiceCard" hidden>
+      <h2>辣度分布</h2>
+      <div id="spiceStats"></div>
+    </div>
+    <h2 style="font-size:17px;margin:20px 0 0">每个人的订单</h2>
+    <div id="people"></div>
+  </section>
+</div>
+
+<div class="bar" id="bar">
+  <div class="bar-inner">
+    <div class="summary" id="cartSummary">还没有选菜</div>
+    <button class="btn" id="submitBtn">提交订单</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="config.js"></script>
+<script>
+(() => {
+  const C = window.BBQ_CONFIG;
+  const DEMO = !C.SCRIPT_URL;
+  const $ = (id) => document.getElementById(id);
+  const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+
+  // 菜品索引
+  const ITEM = {};
+  C.MENU.forEach((cat) => cat.items.forEach((it) => (ITEM[it.id] = { ...it, category: cat.category })));
+
+  // 状态
+  let cart = {};          // id -> 数量
+  let spice = "";
+  let orders = [];        // 服务器上的所有订单
+  let lastFetch = null;
+
+  // ---------- 存储层 ----------
+  const store = {
+    local() { try { return JSON.parse(localStorage.getItem("bbq_demo_orders") || "[]"); } catch { return []; } },
+    saveLocal(list) { try { localStorage.setItem("bbq_demo_orders", JSON.stringify(list)); } catch {} },
+    async list() {
+      if (DEMO) return this.local();
+      const r = await fetch(C.SCRIPT_URL, { cache: "no-store" });
+      const d = await r.json();
+      if (!d.ok) throw new Error(d.error);
+      return d.orders;
+    },
+    async post(payload) {
+      if (DEMO) {
+        let list = this.local().filter((o) => o.name !== payload.name);
+        if (payload.action === "save") list.push({ ...payload, updated: new Date().toISOString() });
+        this.saveLocal(list);
+        return list;
+      }
+      const r = await fetch(C.SCRIPT_URL, {
+        method: "POST",
+        headers: { "Content-Type": "text/plain;charset=utf-8" }, // 避免 CORS 预检
+        body: JSON.stringify(payload),
+      });
+      const d = await r.json();
+      if (!d.ok) throw new Error(d.error);
+      return d.orders;
+    },
+  };
+
+  // ---------- 工具 ----------
+  let toastTimer;
+  function toast(msg) {
+    const t = $("toast");
+    t.textContent = msg;
+    t.classList.add("show");
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => t.classList.remove("show"), 2200);
+  }
+  const myName = () => $("name").value.trim();
+  const findOrder = (name) => orders.find((o) => o.name === name);
+  const itemLabel = (id) => (ITEM[id] ? ITEM[id].name : id);
+  const unitOf = (id) => (ITEM[id] ? ITEM[id].unit : "份");
+  function fmtTime(iso) {
+    const d = new Date(iso);
+    if (isNaN(d)) return "";
+    const p = (n) => String(n).padStart(2, "0");
+    return `${d.getMonth() + 1}月${d.getDate()}日 ${p(d.getHours())}:${p(d.getMinutes())}`;
+  }
+
+  // ---------- 点单页 ----------
+  function othersCount(id) {
+    const me = myName();
+    return orders.reduce((s, o) => s + (o.name !== me && o.items[id] ? o.items[id] : 0), 0);
+  }
+
+  function renderMenu() {
+    $("menu").innerHTML = C.MENU.map((cat) => `
+      <div class="card">
+        <h2>${esc(cat.category)}</h2>
+        ${cat.items.map((it) => `
+          <div class="item" data-id="${esc(it.id)}">
+            <div>
+              <span class="name">${esc(it.name)}</span><span class="unit">/ ${esc(it.unit)}</span>
+              <div class="others"></div>
+            </div>
+            <div class="stepper">
+              <button class="minus" aria-label="减少">−</button>
+              <span class="qty">0</span>
+              <button class="plus" aria-label="增加">+</button>
+            </div>
+          </div>`).join("")}
+      </div>`).join("");
+    refreshMenu();
+  }
+
+  function refreshMenu() {
+    document.querySelectorAll("#menu .item").forEach((row) => {
+      const id = row.dataset.id;
+      const n = cart[id] || 0;
+      row.querySelector(".qty").textContent = n;
+      row.querySelector(".minus").disabled = n === 0;
+      row.classList.toggle("picked", n > 0);
+      const o = othersCount(id);
+      row.querySelector(".others").textContent = o ? `其他人已点 ${o} ${unitOf(id)}` : "";
+    });
+    const kinds = Object.keys(cart).length;
+    const total = Object.values(cart).reduce((a, b) => a + b, 0);
+    $("cartSummary").innerHTML = kinds ? `已选 <b>${kinds}</b> 样，共 <b>${total}</b> 份` : "还没有选菜";
+    const existing = findOrder(myName());
+    $("submitBtn").textContent = existing ? "更新订单" : "提交订单";
+    $("deleteWrap").hidden = !existing;
+  }
+
+  $("menu").addEventListener("click", (e) => {
+    const btn = e.target.closest("button");
+    if (!btn) return;
+    const id = btn.closest(".item").dataset.id;
+    const n = (cart[id] || 0) + (btn.classList.contains("plus") ? 1 : -1);
+    if (n > 0) cart[id] = Math.min(n, 99); else delete cart[id];
+    refreshMenu();
+  });
+
+  function renderSpice() {
+    $("spice").innerHTML = C.SPICE_LEVELS.map((s) =>
+      `<button class="chip ${s === spice ? "active" : ""}" data-v="${esc(s)}">${esc(s)}</button>`).join("");
+  }
+  $("spice").addEventListener("click", (e) => {
+    const b = e.target.closest(".chip");
+    if (!b) return;
+    spice = spice === b.dataset.v ? "" : b.dataset.v;
+    renderSpice();
+  });
+
+  function loadOrderIntoForm(o) {
+    cart = {};
+    Object.entries(o.items || {}).forEach(([k, v]) => { if (v > 0) cart[k] = v; });
+    spice = o.spice || "";
+    $("note").value = o.note || "";
+    renderSpice();
+    refreshMenu();
+  }
+
+  function onNameChange() {
+    const name = myName();
+    try { localStorage.setItem("bbq_name", name); } catch {}
+    const o = findOrder(name);
+    const hint = $("nameHint");
+    if (o && Object.keys(cart).length === 0) {
+      loadOrderIntoForm(o);
+      hint.textContent = "已载入你之前的订单，修改后点“更新订单”即可。";
+      hint.className = "hint";
+    } else if (o) {
+      hint.textContent = `“${name}”已经有订单了，提交会覆盖它。`;
+      hint.className = "hint warn";
+    } else {
+      hint.textContent = "同一个名字再次提交会覆盖之前的订单，方便修改。";
+      hint.className = "hint";
+    }
+    refreshMenu();
+  }
+  $("name").addEventListener("change", onNameChange);
+  $("name").addEventListener("blur", onNameChange);
+
+  $("submitBtn").addEventListener("click", async () => {
+    const name = myName();
+    if (!name) { toast("请先填写名字"); $("name").focus(); return; }
+    if (!Object.keys(cart).length) { toast("还没有选菜哦"); return; }
+    const btn = $("submitBtn");
+    btn.disabled = true;
+    btn.textContent = "提交中…";
+    try {
+      orders = await store.post({ action: "save", name, items: cart, spice, note: $("note").value.trim() });
+      lastFetch = new Date();
+      try { localStorage.setItem("bbq_name", name); } catch {}
+      toast("✅ 订单已保存！");
+      renderAll();
+    } catch (err) {
+      toast("❌ 提交失败，请重试");
+      console.error(err);
+    } finally {
+      btn.disabled = false;
+      refreshMenu();
+    }
+  });
+
+  $("deleteBtn").addEventListener("click", async () => {
+    const name = myName();
+    if (!name || !confirm(`确定取消“${name}”的订单吗？`)) return;
+    try {
+      orders = await store.post({ action: "delete", name });
+      lastFetch = new Date();
+      cart = {}; spice = ""; $("note").value = "";
+      renderSpice();
+      toast("订单已取消");
+      renderAll();
+    } catch (err) {
+      toast("❌ 操作失败，请重试");
+      console.error(err);
+    }
+  });
+
+  // ---------- 汇总页 ----------
+  function renderAll() {
+    refreshMenu();
+
+    const totals = {};          // id -> {n, who: [[name, n]]}
+    orders.forEach((o) => Object.entries(o.items).forEach(([id, n]) => {
+      (totals[id] ||= { n: 0, who: [] }).n += n;
+      totals[id].who.push([o.name, n]);
+    }));
+    const grand = Object.values(totals).reduce((s, t) => s + t.n, 0);
+    $("statPeople").textContent = orders.length;
+    $("statItems").textContent = grand;
+    $("updatedAt").textContent = lastFetch ? `更新于 ${fmtTime(lastFetch.toISOString())}` : "";
+
+    // 按菜单顺序分类；菜单里没有的（被删掉的菜）放到“其他”
+    const groups = C.MENU.map((cat) => ({ category: cat.category, ids: cat.items.map((i) => i.id).filter((id) => totals[id]) }));
+    const unknown = Object.keys(totals).filter((id) => !ITEM[id]);
+    if (unknown.length) groups.push({ category: "其他", ids: unknown });
+    const html = groups.filter((g) => g.ids.length).map((g) => `
+      <div class="cat-title">${esc(g.category)}</div>
+      <table>${g.ids.map((id) => `
+        <tr>
+          <td>${esc(itemLabel(id))}</td>
+          <td class="who">${totals[id].who.map(([w, n]) => `${esc(w)}×${n}`).join("、")}</td>
+          <td class="num">${totals[id].n} ${esc(unitOf(id))}</td>
+        </tr>`).join("")}
+      </table>`).join("");
+    $("totals").innerHTML = html || `<div class="empty">还没有人点单</div>`;
+
+    const spiceCount = {};
+    orders.forEach((o) => { if (o.spice) spiceCount[o.spice] = (spiceCount[o.spice] || 0) + 1; });
+    $("spiceCard").hidden = !Object.keys(spiceCount).length;
+    $("spiceStats").innerHTML = `<div class="chips">${Object.entries(spiceCount)
+      .map(([s, n]) => `<span class="chip">${esc(s)} · ${n}人</span>`).join("")}</div>`;
+
+    const sorted = [...orders].sort((a, b) => String(b.updated).localeCompare(String(a.updated)));
+    $("people").innerHTML = sorted.map((o) => `
+      <div class="card">
+        <div class="person-head">
+          <div><span class="pname">${esc(o.name)}</span>${o.spice ? `<span class="tag">${esc(o.spice)}</span>` : ""}</div>
+          <span class="time">${esc(fmtTime(o.updated))}</span>
+        </div>
+        <div class="person-items">${Object.entries(o.items)
+          .map(([id, n]) => `${esc(itemLabel(id))} ×${n}`).join("　")}</div>
+        ${o.note ? `<div class="person-note">💬 ${esc(o.note)}</div>` : ""}
+      </div>`).join("") || `<div class="empty">还没有人点单</div>`;
+  }
+
+  async function refresh(silent) {
+    try {
+      orders = await store.list();
+      lastFetch = new Date();
+      renderAll();
+    } catch (err) {
+      if (!silent) toast("❌ 加载失败，请检查网络");
+      console.error(err);
+    }
+  }
+  $("refreshBtn").addEventListener("click", () => refresh(false));
+
+  // ---------- 标签页 ----------
+  let pollTimer;
+  document.querySelectorAll(".tab").forEach((t) => t.addEventListener("click", () => {
+    document.querySelectorAll(".tab").forEach((x) => x.classList.toggle("active", x === t));
+    const all = t.dataset.tab === "all";
+    $("tab-order").hidden = all;
+    $("tab-all").hidden = !all;
+    $("bar").hidden = all;
+    clearInterval(pollTimer);
+    if (all) {
+      refresh(true);
+      pollTimer = setInterval(() => refresh(true), 20000);
+    }
+    window.scrollTo(0, 0);
+  }));
+
+  // ---------- 初始化 ----------
+  document.title = C.TITLE.replace(/\s*\p{Extended_Pictographic}/gu, "") || "烧烤点单";
+  $("title").textContent = C.TITLE;
+  $("subtitle").textContent = C.SUBTITLE;
+  $("demoBanner").hidden = !DEMO;
+  try { $("name").value = localStorage.getItem("bbq_name") || ""; } catch {}
+  renderMenu();
+  renderSpice();
+  refresh(false).then(() => { if (myName()) onNameChange(); });
+})();
+</script>
+</body>
+</html>
